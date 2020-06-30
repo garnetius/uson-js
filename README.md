@@ -67,8 +67,18 @@ This repository has USON implemented in JavaScript.
     ]
     ```
 
-  * Backwards-compatible with JSON: a valid JSON document is
-    a valid USON document as well.
+  * Comments:
+
+  ```uson
+  {
+    # Single line.
+    (* Nested multiline
+    key: (and inline) value; *)
+  }
+  ```
+
+Backwards-compatible with JSON: a valid JSON document is
+a valid USON document as well.
 
 Somewhat more detailed description of USON features is in [samples](https://github.com/garnetius/uson/tree/master/samples) gallery.
 
