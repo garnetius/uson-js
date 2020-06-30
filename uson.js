@@ -692,7 +692,7 @@ parseData (idx) {
         return returnData();
       }
 
-      if ((code0 | code1) > 63 || len - idx < 2) {
+      if ((code0 > 64 && code1 > 64) || len - idx < 2) {
         /* At least two more valid bytes must be present */
         return this.parseError (USON.error.base64Encoding, idx);
       }
@@ -702,6 +702,7 @@ parseData (idx) {
       decoded += String.fromCharCode ((code0 << 2) | (code1 >> 4));
 
       if (code2 < 64) {
+        ++idx;
         decoded += String.fromCharCode (0xFF & ((code1 << 4) | (code2 >> 2)));
       } else if (code2 === 64) {
         ++idx;
@@ -723,7 +724,6 @@ parseData (idx) {
       decoded += String.fromCharCode ((code0 << 2) | (code1 >> 4));
       decoded += String.fromCharCode (0xFF & ((code1 << 4) | (code2 >> 2)));
       decoded += String.fromCharCode (0xFF & ((code2 << 6) |  code3));
-
       idx += 4;
     }
   }
@@ -1282,9 +1282,7 @@ stringifyData (data) {
   const media = data.mediaType;
 
   /* Check for media type */
-  if (media.length !== 0) {
-    out += '?' + media + '?';
-  }
+  out += '?' + media + '?';
 
   /* Encode the data */
   for (; idx !== end; idx += 3) {
