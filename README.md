@@ -69,13 +69,13 @@ This repository has USON implemented in JavaScript.
 
   * Comments:
 
-  ```uson
-  {
-    # Single line.
-    (* Nested multiline
-    key: (and inline) value; *)
-  }
-  ```
+    ```uson
+    {
+      # Single line.
+      (* Nested multiline
+      key: (and inline) value; *)
+    }
+    ```
 
 Backwards-compatible with JSON: a valid JSON document is
 a valid USON document as well.
