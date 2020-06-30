@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>USON</title>
+  <meta charset="utf-8"/>
+  <script src="./uson.js"></script>
+  <script type="text/javascript">
+"use strict";
+
+/* USON browser test script */
+var editor;
+var tmout;
+
+function parseUson() {
+  console.log (JSON.stringify (USON.parse (editor.value), null, 2));
+}
+
+function parseUsonTimeout() {
+  clearTimeout (tmout);
+  tmout = setTimeout (parseUson, 1000);
+}
+
+function main() {
+  editor = document.getElementById ("editor");
+  editor.addEventListener ("keyup", parseUsonTimeout);
+  tmout = null;
+}
+
+document.addEventListener ("DOMContentLoaded", main);
+  </script>
+  <style type="text/css">
+body {
+  margin: 0;
+  border: 0;
+  padding: 4em;
+}
+
+textarea {
+  font-size: 140%;
+
+  margin: 0;
+  border: 0;
+  padding: 0;
+
+  width: 100%;
+  height: 20em;
+}
+  </style>
+</head>
+<body>
+  <textarea id="editor">{}</textarea>
+</body>
+</html>

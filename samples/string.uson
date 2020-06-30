@@ -1,0 +1,2 @@
+# True Unicode escape sequences without UTF-16 surrogate pairs
+"USON on GitHub! \u{1F602}"

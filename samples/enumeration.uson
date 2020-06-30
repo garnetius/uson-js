@@ -1,0 +1,8 @@
+# USON identifier is treated as a separate type
+# from regular double-quoted string.
+#
+# It's a string that has failed to parse as a number.
+{
+  flowers: [aster azalea begonia bluebell camellias crocus daisy]
+  favorite: daisy
+}

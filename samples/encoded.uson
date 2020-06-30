@@ -1,0 +1,19 @@
+# USON Base64 encoding makes it possible to include
+# arbitrary data in documents, even if it is
+# in binary format.
+#
+# The optional media type tag specifies what decoded
+# data actually is and helps to guard from
+# malicious or unwanted inputs.
+{
+  data: <?text/plain?VVNPTiByb2NrcyE=>
+
+  # Padding characters and media type are optional,
+  # but question marks still must be present
+  # to distinguish from verbatim strings
+  without-media-type: <??MDEyMzQ1Njc4OQ>
+
+  # Without comment this would be an error.
+  # Possible way to put J{U}SX in USON.
+  #empty: <tag/>
+}

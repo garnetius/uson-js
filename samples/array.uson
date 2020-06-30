@@ -1,0 +1,16 @@
+# Array items can be separated simply by whitespace
+[
+  "aardvark"
+  "abandon"
+  "ability"
+  "access"
+  "abroad"
+
+  # Separating by commas is also possible
+  [
+    "arc", "angle", "attic"
+  ]
+
+  # Trailing comma
+  ["abstract", "arrow", "knee",]
+]

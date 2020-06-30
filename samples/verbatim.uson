@@ -1,0 +1,26 @@
+# Long literal strings
+{
+  # Might as well just stuff in here anything you want
+  article: <!markdown
+Markdown is a lightweight markup language with plain text formatting syntax.
+It is designed so that it can be converted to HTML and many other formats
+using a tool by the same name. Markdown is often used to format readme files,
+for writing messages in online discussion forums, and to create rich text
+using a plain text editor. As the initial description of Markdown contained
+ambiguities and unanswered questions, many implementations and extensions
+of Markdown appeared over the years to answer these issues.
+!markdown>
+
+  # Regular expressions can be effortlessly written
+  # like this: no escaping needed
+  pattern: <!regex
+<\s*a[^>]*>(.*?)<\s*/\s*a>
+!regex>
+
+  # The delimiting identifier tag can be omitted
+  placeholder: <!
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Cras tincidunt neque eu accumsan pharetra. Aenean dignissim
+bibendum magna vel ultricies.
+!>
+}
