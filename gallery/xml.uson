@@ -1,0 +1,7 @@
+{
+  # XML node value
+  xml: <node>
+    <text>Some <tag/> &amp; text.</text>
+    <p key="value">Some more<tag/> &amp; text.</p>
+  </node>;
+}

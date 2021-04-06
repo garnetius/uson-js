@@ -1,4 +1,4 @@
 # Identifiers in both key name and value
 {
-  deposit: €1000.00
+  deposit: 1000.00€;
 }

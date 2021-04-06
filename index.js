@@ -1,21 +1,25 @@
 /* ================================= $ J $ =====================================
-// USON Node.js test program.
+// USON Node.js demonstration program.
 // -------------------------------------------------------------------------- */
 
-"use strict";
+"use strict"
 
-const fs = require ("fs");
+import {Core} from "../core-js/core.mjs";
 
-const {
+Core.infect();
+
+import fs from "fs";
+
+import {
   USON,
   USONParser
-} = require ("./uson.js");
+} from "./uson.mjs";
 
 /* ===--------------------------------------------------------------------------
 // Check the command line arguments */
 if (process.argv.length < 3) {
   console.log (`
-Usage: ${process.argv[0]} ${process.argv[1]} <document>
+Usage: ${process.argv[0]} ${process.argv[1]} <document> [min]
 `);
 
   process.exit (1);
@@ -30,12 +34,12 @@ if (!fs.existsSync (path)) {
   process.exit (1);
 }
 
-const document = fs.readFileSync (path, "utf8");
+const doc = fs.readFileSync (path, "utf8");
 
 /* Use the parser object directly instead of `USON.parse()`
 // so that we can have access to the parser's position
 // and its error code if something goes wrong */
-const parser = new USONParser (document/*, (key, val) => {
+const parser = new USONParser (doc/*, (key, val) => {
   console.log (key);
   return val;
 }*/);
@@ -53,7 +57,7 @@ console.log ("Position:", parser.pos);
 console.log();
 console.log ("JSON:", JSON.stringify (root, null, min ? 0 : 2));
 
-/* Format back as USON */
+/* Format as USON */
 console.log();
 console.log ("USON:", USON.stringify (root, null, min ? 0 : 2));
 

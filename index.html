@@ -1,17 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <title>USON</title>
   <meta charset="utf-8"/>
-  <script src="./uson.js"></script>
-  <script type="text/javascript">
-"use strict";
+  <script type="module" type="text/javascript">
+/* USON browser demonstration page */
+"use strict"
 
-/* USON browser test script */
-var editor;
-var tmout;
+import {Core} from "../core-js/core.mjs";
+
+Core.infect();
+
+import {USON} from "./uson.mjs";
+
+let editor;
+let tmout;
 
 function parseUson() {
+  clearTimeout (tmout);
   console.log (JSON.stringify (USON.parse (editor.value), null, 2));
 }
 
@@ -22,6 +28,7 @@ function parseUsonTimeout() {
 
 function main() {
   editor = document.getElementById ("editor");
+  editor.addEventListener ("change", parseUson);
   editor.addEventListener ("keyup", parseUsonTimeout);
   tmout = null;
 }
@@ -32,22 +39,29 @@ document.addEventListener ("DOMContentLoaded", main);
 body {
   margin: 0;
   border: 0;
-  padding: 4em;
+  padding: 0;
+}
+
+#container {
+  width: 100%;
+  height: 100vh;
+  border: 4em transparent solid;
+  box-sizing: border-box;
 }
 
 textarea {
   font-size: 140%;
-
   margin: 0;
   border: 0;
   padding: 0;
-
   width: 100%;
-  height: 20em;
+  height: 100%;
+  resize: none;
+  outline: none;
 }
   </style>
 </head>
 <body>
-  <textarea id="editor">{}</textarea>
+  <div id="container"><textarea id="editor">{}</textarea></div>
 </body>
 </html>

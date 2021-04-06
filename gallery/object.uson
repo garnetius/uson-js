@@ -1,0 +1,21 @@
+{
+  # Double quotes around simple key names aren't necessary
+  name: "server";
+
+  (* Multiline comments (* can be safely nested *)
+  ** inside each other *)
+  configuration: {
+    # The last semicolon before the closing bracket is not
+    # necessary, but putting it is not an error either.
+    address: "0.0.0.0";
+    port: 80;
+  };
+
+  locations: {
+    "/": {
+      root: "/opt/www";
+      enabled: true;
+      cache: on (inline comment);
+    }
+  }
+}

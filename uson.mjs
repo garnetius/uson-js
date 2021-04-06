@@ -1,13 +1,29 @@
 /* ================================= $ J $ =====================================
-// USON parser and generator implemented in JavaScript.
+// <uson.mjs>
+//
+// USON: a modern improvement over JSON.
+//
+// This is a USON parser and writer implemented in JavaScript.
+//
+// Copyright garnetius.
 // -------------------------------------------------------------------------- */
 
-"use strict";
+"use strict"
+
+import {binarySearch} from "../core-js/core.mjs";
+
+import {
+  UXML,
+  UXMLNode,
+  UXMLDocument,
+  UXMLParser,
+  UXMLFormatter
+} from "../uxml-js/uxml.mjs";
 
 /* =============================================================================
 // Types
 // -----------------------------------------------------------------------------
-// Wrapper around regular object to help with parsing */
+// Wrapper around regular object (reserved for possible additions) */
 class USONObject extends Object {
 get [Symbol.toStringTag]() {
   return "USONObject";
@@ -18,7 +34,7 @@ constructor (value) {
 }}
 
 /* ===--------------------------------------------------------------------------
-// Wrapper around regular array */
+// Wrapper around regular array with functional extensions */
 class USONArray extends Array {
 get [Symbol.toStringTag]() {
   return "USONArray";
@@ -29,57 +45,22 @@ constructor (...args) {
 }}
 
 /* ===--------------------------------------------------------------------------
-// Look up the index of the value in a sorted array using binary search */
-function binarySearch (key, cmpFunc=binarySearch.compare) {
-  let idx = 0;
-  let start = 0;
-  let end = this.length;
-
-  while (start !== end) {
-    idx = Math.floor ((start + end) / 2);
-
-    const cmp = cmpFunc (key, this[idx]);
-
-    if (cmp < 0) end = idx;
-    else if (cmp > 0) start = idx + 1;
-    else return idx;
-  }
-
-  /* Return the negative value if the provided key
-  // wasn't found. This value converted to positive
-  // using `Math.abs()` would be the exact index
-  // at which the key can be inserted
-  // to keep the array sorted. */
-  return -(idx + (end === this.length));
-}
-
-/* ===--------------------------------------------------------------------------
-// Default comparison function expects two numbers */
-Object.defineProperty (binarySearch, "compare", {value: (a, b) => a - b});
-
-/* ===--------------------------------------------------------------------=== */
-
-if (USONArray.prototype.binarySearch === undefined) {
-  Object.defineProperty (USONArray.prototype, "binarySearch", {
-    value: binarySearch
-  });
-}
-
+// USON array extensions from `core-js` */
 if (USONArray.prototype.lastIndex === undefined) {
   Object.defineProperty (USONArray.prototype, "lastIndex", {
-    get: function() {return this.length - 1;}
+    get: function() {return this.length - 1}
   });
 }
 
 if (USONArray.prototype.first === undefined) {
   Object.defineProperty (USONArray.prototype, "first", {
-    value: function() {return this[0];}
+    value: function() {return this[0]}
   });
 }
 
 if (USONArray.prototype.last === undefined) {
   Object.defineProperty (USONArray.prototype, "last", {
-    value: function() {return this[this.lastIndex];}
+    value: function() {return this[this.lastIndex]}
   });
 }
 
@@ -94,12 +75,64 @@ if (USONArray.prototype.insert === undefined) {
 
 if (USONArray.prototype.remove === undefined) {
   Object.defineProperty (USONArray.prototype, "remove", {
-    value: function (idx, num) {return this.splice (idx, num);}
+    value: function (idx, num) {return this.splice (idx, num)}
+  });
+}
+
+if (USONArray.prototype.binarySearch === undefined) {
+  Object.defineProperty (USONArray.prototype, "binarySearch", {
+    value: function (key, cmpfn) {binarySearch (this, key, cmpfn)}
   });
 }
 
 /* ===--------------------------------------------------------------------------
-// This also holds the `delimitingIdentifier` property
+// USON binary data */
+class USONData extends Uint8Array {
+get [Symbol.toStringTag]() {
+  return "USONData";
+}
+
+/* ===--------------------------------------------------------------------------
+// Textual representation in ASCII (UTF-8) form */
+toString() {
+  let string = "";
+
+  for (let idx = 0; idx !== this.byteLength; ++idx) {
+    string += String.fromCharCode (this[idx]);
+  }
+
+  return string;
+}
+
+toJSON() {return this.toString()}
+toUSON() {return this}
+
+constructor (source, mediaType="") {
+  let buffer;
+
+  if (typeof source === "string" || source instanceof String) {
+    /* The string must have ASCII (or UTF-8 over UCS2) encoding */
+    buffer = new Uint8Array(source.length);
+
+    for (let idx = 0; idx !== source.length; ++idx) {
+      const code = source.charCodeAt(idx);
+      if (code > 255) throw new RangeError();
+      buffer[idx] = code;
+    }
+  } else {
+    buffer = source;
+  }
+
+  super (buffer.buffer);
+
+  Object.defineProperty (this, "mediaType", {
+    value: mediaType,
+    writable: true
+  });
+}}
+
+/* ===--------------------------------------------------------------------------
+// This also holds the `delimitingIdentifier` property,
 // which is a delimiting identifier string */
 class USONVerbatim extends String {
 get [Symbol.toStringTag]() {
@@ -116,56 +149,15 @@ constructor (string, delimitingIdentifier="") {
 }}
 
 /* ===--------------------------------------------------------------------------
-// This could be `Uint8Array`, but we want it to be
-// easily `JSON.stringify()`-able */
-class USONData extends String {
-get [Symbol.toStringTag]() {
-  return "USONData";
-}
-
-/* ===--------------------------------------------------------------------------
-// Binary representation */
-toBinary() {
-  let binary = new Uint8Array(this.length);
-
-  Array.prototype.forEach.call (binary, function (elmnt, idx, arr) {
-    arr[idx] = this.charCodeAt(idx);
-  }, this);
-
-  return binary;
-}
-
-constructor (string, mediaType="") {
-  super (string);
-
-  Object.defineProperty (this, "mediaType", {
-    value: mediaType,
-    writable: true
-  });
-}}
-
-/* ===--------------------------------------------------------------------------
-// Distinguish from double-quoted string */
+// Distinguishable from double-quoted string */
 class USONIdentifier extends String {
 get [Symbol.toStringTag]() {
   return "USONIdentifier";
 }
 
-constructor (string, valid=false) {
-  if (!valid) {
-    if (!USON.isIdentifier (string)) {
-      throw new SyntaxError();
-    }
-  }
-
+constructor (string) {
   super (string);
 }}
-
-/* ===--------------------------------------------------------------------------
-// Enforce integral number type */
-function Integer (val) {
-  return val | 0;
-}
 
 /* =============================================================================
 // Parser
@@ -191,9 +183,9 @@ parseEscapeSingle (chr, idx) {
   case '"': break;
   case '\\': break;
   case 'n': chr = '\n'; break;
-  /* JSON compatibility */
-  case 't': chr = '\t'; break;
   case 'r': chr = '\r'; break;
+  case 't': chr = '\t'; break;
+  /* JSON compatibility */
   case 'b': chr = '\b'; break;
   case 'f': chr = '\f'; break;
   case '/': break;
@@ -243,7 +235,6 @@ parseEscapeUnicodeJSON (idx) {
     }
 
     idx += 6;
-
     const high = parseInt (uson.substr (start + 6, 4), 16);
 
     if (Number.isNaN (high)) {
@@ -276,7 +267,6 @@ parseEscapeUnicode (idx) {
 
   /* Find where the Unicode sequence ends */
   regex.lastIndex = start;
-
   const match = regex.exec (uson);
 
   if (match === null) {
@@ -362,7 +352,6 @@ parseString (idx) {
 
     /* Assemble the string */
     const end = match.index;
-
     str += uson.substring (idx, end);
     idx = end;
 
@@ -387,7 +376,6 @@ parseString (idx) {
       /* JSON compatibility */
       ++idx;
       str += '\x7f';
-
       continue;
     } else {
       /* Control character */
@@ -399,7 +387,7 @@ parseString (idx) {
 }
 
 /* ===--------------------------------------------------------------------------
-// Identifier: opera */
+// Identifier: movie */
 parseIdentifier (key, idx) {
   const start = idx;
   const len = this.size;
@@ -411,9 +399,8 @@ parseIdentifier (key, idx) {
   }
 
   /* Get the stop-character */
-  regex.lastIndex = start;
-
   let err, end;
+  regex.lastIndex = start;
   let match = regex.exec (uson);
 
   if (match === null) {
@@ -429,21 +416,20 @@ parseIdentifier (key, idx) {
   } else {
     /* Extract the identifier string */
     let ident = uson.substring (start, end);
-
     this.pos = end;
 
     if (!key) {
       /* Check if the identifier is a boolean, a null,
       // or a special floating point number */
       switch (ident) {
-      case      "true": ident = true; break;
-      case     "false": ident = false; break;
-      case      "null": ident = null; break;
-      case  "Infinity": ident = Infinity; break;
-      case "+Infinity": ident = Infinity; break;
-      case "-Infinity": ident =-Infinity; break;
-      case       "NaN": ident = NaN; break;
-      default: return new USONIdentifier(ident, true);
+      case  "true": ident = true; break;
+      case "false": ident = false; break;
+      case  "null": ident = null; break;
+      case   "Inf": // fallthrough
+      case  "+Inf": ident = Infinity; break;
+      case  "-Inf": ident =-Infinity; break;
+      case   "NaN": ident = NaN; break;
+      default: return new USONIdentifier(ident);
       }
     }
 
@@ -464,18 +450,15 @@ parseNumber (idx) {
   }
 
   /* Find where the number ends */
-  regex.lastIndex = start;
-
   let end;
-
-  const match = regex.exec (uson);
   let isIdent = false;
+  regex.lastIndex = start;
+  const match = regex.exec (uson);
 
   if (match === null) {
     end = len;
   } else {
     end = match.index;
-
     const chr = uson[end];
 
     /* Check if this is an identifier */
@@ -505,15 +488,21 @@ parseNumber (idx) {
 /* ===--------------------------------------------------------------------------
 // Verbatim string delimiting identifier: !markdown */
 parseVerbatimDelimiter (idx) {
-  const start = idx;
   const len = this.size;
   const uson = this.input;
   const regex = USON.pattern.identifier;
 
-  /* Shares valid characters with a regular identifier.
-  // Scan until the new line character. */
-  regex.lastIndex = start;
+  /* Check for carriage return delimiter format
+  // (only for minified transmission) */
+  let chr = uson[idx];
 
+  if (chr === '\r') {
+    this.pos = idx + 1;
+    return {sep: '\r', delim: ''};
+  }
+
+  /* Shares valid characters with a regular identifier */
+  const start = regex.lastIndex = idx;
   const match = regex.exec (uson);
 
   if (match === null) {
@@ -521,7 +510,7 @@ parseVerbatimDelimiter (idx) {
   }
 
   const end = match.index;
-  const chr = uson[end];
+  chr = uson[end];
 
   if (chr !== '\n') {
     return this.parseError (USON.error.unexpectedToken, end);
@@ -529,7 +518,7 @@ parseVerbatimDelimiter (idx) {
 
   this.pos = end + 1;
 
-  return uson.substring (start, end);
+  return {sep: '\n', delim: uson.substring (start, end)};
 }
 
 /* ===--------------------------------------------------------------------------
@@ -537,22 +526,22 @@ parseVerbatimDelimiter (idx) {
 parseVerbatim (idx) {
   const len = this.size;
   const uson = this.input;
-  const delim = this.parseVerbatimDelimiter (idx);
+  const delimParse = this.parseVerbatimDelimiter (idx);
 
-  if (delim === undefined) {
+  if (delimParse === undefined) {
     return;
   }
 
   idx = this.pos;
-
   const start = idx;
-  const regex = USON.pattern.commentSingle;
+  const {sep, delim} = delimParse;
+  const regex = (sep === '\r') ? USON.pattern.verbatim
+  : USON.pattern.commentSingle;
 
   /* Find the new line immediately followed by the same
   // delimiting identifier and the closing angle bracket */
   while (true) {
     regex.lastIndex = idx;
-
     const match = regex.exec (uson);
 
     if (match === null) {
@@ -562,20 +551,21 @@ parseVerbatim (idx) {
     const end = match.index;
     const chr = uson[end];
 
-    if (chr === '\n') {
+    if (chr === sep) {
+      idx = end + 1;
+
       if (len - end >= delim.length + 3) {
-        if ((uson[end + 1] === '!') && (uson[end + 2 + delim.length] === '>')) {
-          const sub = uson.substr (end + 2, delim.length);
+        if ((uson[idx] === '!') && (uson[idx + 1 + delim.length] === '>')) {
+          const sub = uson.substr (idx + 1, delim.length);
 
           if (sub === delim) {
-            this.pos = end + 2 + delim.length + 1;
+            this.pos = idx + 1 + delim.length + 1;
 
             /* Wrap the string and save the delimiting identifier */
-            return new USONVerbatim(uson.substring (start, end), delim);
+            return new USONVerbatim(uson.substring (start, end)
+            , (sep === '\r') ? null : delim);
           }
         }
-
-        idx = end + 1;
 
         continue;
       }
@@ -595,7 +585,6 @@ parseMedia (idx) {
 
   /* Find the closing question mark */
   regex.lastIndex = start;
-
   const match = regex.exec (uson);
 
   if (match === null) {
@@ -618,7 +607,7 @@ parseMedia (idx) {
 // Base64-encoded data: <?image/png?...> */
 parseData (idx) {
   const returnData = () => {
-    /* Wrap the data and save the media type */
+    /* Convert to binary and save the media type */
     this.pos = idx + 1;
     return new USONData(decoded, media);
   };
@@ -649,7 +638,15 @@ parseData (idx) {
 
     idx = this.pos;
   } else {
-    return this.parseError (USON.error.noMedia, len);
+    const xml = new UXMLParser();
+    const doc = xml.parse (this.input, idx - 1, len);
+
+    if (doc === null) {
+      return this.parseError (USON.error.xml, xml.pos);
+    }
+
+    this.pos = xml.pos;
+    return doc;
   }
 
   /* Decode the data */
@@ -743,6 +740,7 @@ parseArray (idx) {
       /* Check if we've bumped into
       // the closing bracket */
       if (this.end) {
+        this.pos = idx + 1;
         this.end = false;
         return arr;
       } else {
@@ -760,20 +758,14 @@ parseArray (idx) {
       return this.parseError (USON.error.unexpectedEnd, len);
     }
 
-    let sep;
     const chr = uson[idx];
 
     if (chr === ',') {
-      sep = true;
       ++idx;
     } else if (chr === ']') {
       this.pos = idx + 1;
       return arr;
     } else {
-      sep = this.sep;
-    }
-
-    if (!sep) {
       return this.parseError (USON.error.unexpectedToken, idx);
     }
   }
@@ -784,23 +776,7 @@ parseArray (idx) {
 parseObject (idx) {
   const len = this.size;
   const uson = this.input;
-  const cfg = this.config;
-  const isCfgRoot = this.isConf;
-
-  if (isCfgRoot) {
-    this.isConf = false;
-  }
-
-  let obj;
-
-  if (cfg) {
-    /* Since USON configuration allows duplicate keys
-    // use an associative array to represent
-    // UCFG objects */
-    obj = new USONArray();
-  } else {
-    obj = new USONObject();
-  }
+  const obj = new USONObject();
 
   while (true) {
     /* Get the key */
@@ -810,12 +786,11 @@ parseObject (idx) {
       return this.parseError (USON.error.unexpectedEnd, len);
     }
 
-    let chr = uson[idx];
-
     /* Check for object end */
     let key;
+    let chr = uson[idx];
 
-    if (!isCfgRoot && chr === '}') {
+    if (chr === '}') {
       this.pos = idx + 1;
 
       if (this.reviver !== null) {
@@ -846,42 +821,19 @@ parseObject (idx) {
       return this.parseError (USON.error.unexpectedEnd, len);
     }
 
-    let colon;
-
     chr = uson[idx];
 
-    if (chr === ':') {
-      ++idx;
-      colon = true;
-    } else {
-      colon = false;
+    if (chr !== ':') {
+      return this.parseError (USON.error.unexpectedToken, idx);
     }
 
-    let sep;
-
-    if (!colon) {
-      sep = this.sep;
-    }
+    ++idx;
 
     /* Get the value */
     let value = this.parseValue (idx);
 
     if (value === undefined) {
       return;
-    }
-
-    if (!colon) {
-      /* The colon character can be omitted if the value is
-      // a USON object or an array, but only if there is
-      // whitespace in-between the key */
-      let err;
-
-      if (value instanceof USONObject || Array.isArray (value)) err = !sep;
-      else err = true;
-
-      if (err) {
-        return;
-      }
     }
 
     /* Set the key/value pair */
@@ -892,28 +844,21 @@ parseObject (idx) {
     }
 
     if (value !== undefined) {
-      if (cfg) obj.push ([key, value]);
-      else obj[key] = value;
+      obj[key] = value;
     }
 
     /* Skip delimiters */
     idx = this.skipWspace (this.pos);
 
     if (idx === len) {
-      if (isCfgRoot) {
-        this.pos = len;
-        return obj;
-      }
-
       return this.parseError (USON.error.unexpectedEnd, len);
     }
 
     chr = uson[idx];
 
     if (chr === ';' || /* JSON compatibility */ chr === ',') {
-      sep = true;
       ++idx;
-    } else if (!isCfgRoot && chr === '}') {
+    } else if (chr === '}') {
       this.pos = idx + 1;
 
       if (this.reviver !== null) {
@@ -926,10 +871,6 @@ parseObject (idx) {
 
       return obj;
     } else {
-      sep = this.sep;
-    }
-
-    if (!sep) {
       return this.parseError (USON.error.unexpectedToken, idx);
     }
   }
@@ -946,7 +887,6 @@ skipCommentMulti (idx) {
   while (true) {
     /* Find where the multiline comment ends */
     regex.lastIndex = idx;
-
     const match = regex.exec (uson);
 
     if (match === null) {
@@ -954,14 +894,12 @@ skipCommentMulti (idx) {
     }
 
     idx = match.index;
-
     const chr = uson[idx];
 
     if (chr === '\n') {
       ++idx;
       ++this.line;
       this.linePos = idx;
-
       continue;
     } else if (chr === '(') {
       /* Nested multiline comment */
@@ -994,7 +932,6 @@ skipCommentSingle (idx) {
 
   /* Find the end of the line */
   regex.lastIndex = idx;
-
   const match = regex.exec (uson);
 
   if (match === null) {
@@ -1016,14 +953,12 @@ skipCommentSingle (idx) {
 /* ===--------------------------------------------------------------------------
 // Skip whitespace and comments */
 skipWspace (idx) {
-  let sep = false;
   const len = this.size;
   const uson = this.input;
   const regex = USON.pattern.wspace;
 
   while (true) {
     regex.lastIndex = idx;
-
     const match = regex.exec (uson);
 
     if (match === null) {
@@ -1031,24 +966,18 @@ skipWspace (idx) {
       break;
     }
 
-    /* Check if any whitespace have been skipped */
-    if (match.index !== idx) {
-      sep = true;
-    }
-
     idx = match.index;
 
     /* Skip the comments. Semantically comments
     // are treated just like whitespace:
     // as if they don't exist. */
-    let chr = uson[idx];
+    const chr = uson[idx];
 
     if (chr === '\n') {
       /* Track the line and column numbers */
       ++idx;
       ++this.line;
       this.linePos = idx;
-
       continue;
     } else if (chr === '\t' || chr === '\r') {
       /* JSON compatibility */
@@ -1057,24 +986,15 @@ skipWspace (idx) {
     } else if (chr === '#') {
       /* Single line comment */
       idx = this.skipCommentSingle (idx + 1);
-      sep = true;
-
       continue;
     } else if (chr === '(') {
       /* Multiline comment */
       idx = this.skipCommentMulti (idx + 1);
-      sep = true;
-
       continue;
     }
 
     break;
   }
-
-  /* This flag is used to check if USON object key/value pairs
-  // and USON array items are properly separated from each other
-  // by whitespace when the semicolon separator is absent */
-  this.sep = sep;
 
   return idx;
 }
@@ -1084,7 +1004,6 @@ skipWspace (idx) {
 parseValue (idx) {
   const len = this.size;
   const uson = this.input;
-
   idx = this.skipWspace (idx);
 
   if (idx === len) {
@@ -1094,15 +1013,13 @@ parseValue (idx) {
   const chr = uson[idx];
 
   switch (chr) {
+  case '"': return this.parseString (idx + 1);
   case '{': return this.parseObject (idx + 1);
   case '[': return this.parseArray (idx + 1);
   case '<': return this.parseData (idx + 1);
-  case '"': return this.parseString (idx + 1);
   case ']':
     /* Catch the closing array bracket */
-    this.pos = idx + 1;
     this.end = true;
-
     return;
   default:
     /* USON identifier is a number which failed
@@ -1115,32 +1032,74 @@ parseValue (idx) {
 /* ===--------------------------------------------------------------------------
 // Parse the input */
 parse() {
-  if (this.config) return this.parseObject (this.pos);
-  return this.parseValue (this.pos);
+  if (this.end) {
+    return;
+  }
+
+  const val = this.parseValue (this.pos);
+
+  if (this.end) {
+    return this.parseError (USON.error.unexpectedToken, this.pos);
+  }
+
+  /* Prevent from calling again */
+  this.end = true;
+  return val;
 }
 
 /* ===--------------------------------------------------------------------------
 // Initialize the parser */
-constructor (input, reviver=null, config=false) {
+constructor (input, reviver=null) {
   Object.defineProperties (this, {
     input: {value: input},
     reviver: {value: reviver},
-    config: {value: config},
-    size: {value: input.length},
-    isConf: {value: config, writable: true},
-    err: {value: USON.error.ok, writable: true},
-    end: {value: false, writable: true},
-    sep: {value: false, writable: true},
-    line: {value: 1, writable: true},
-    col: {value: 0, writable: true},
+    size:  {value: input.length},
+    err:   {value: USON.error.ok, writable: true},
+    end:   {value: false, writable: true},
+    line:  {value: 1, writable: true},
+    col:   {value: 0, writable: true},
     linePos: {value: 0, writable: true},
-    pos: {value: 0, writable: true}
+    pos:   {value: 0, writable: true}
   });
 }}
 
 /* =============================================================================
 // Formatter
 // -------------------------------------------------------------------------- */
+
+class Stringify {
+get [Symbol.toStringTag]() {
+  return "Stringify";
+}
+
+/* ===--------------------------------------------------------------------------
+// Serialize built-in primitives */
+static number (num) {
+  /* Check for special number value */
+  if (isFinite (num)) {
+    return num.toString();
+  } else if (Number.isNaN (num)) {
+    return "NaN";
+  } else if (num > 0) {
+    return "Inf";
+  } else {
+    return "-Inf";
+  }
+}
+
+static boolean (bool) {
+  return bool ? "true" : "false";
+}
+
+static null() {
+  return "null";
+}
+
+static undefined() {
+  return "undefined";
+}}
+
+/* ===--------------------------------------------------------------------=== */
 
 class USONFormatter {
 get [Symbol.toStringTag]() {
@@ -1150,14 +1109,15 @@ get [Symbol.toStringTag]() {
 /* ===--------------------------------------------------------------------------
 // Filter the object property through the replacer */
 filter (owner, key, val) {
-  if (this.replacer === null) return val;
+  /* Look for the replacement function */
   if (val === undefined) return;
 
-  /* Look for the replacement function */
   if (val.toUSON !== undefined) val = val.toUSON.call (val, key);
   else if (val.toJSON !== undefined) val = val.toJSON.call (val, key);
 
   /* Replace the value */
+  if (this.replacer === null) return val;
+
   if (Array.isArray (this.replacer)) {
     if (this.replacer.indexOf (key) === -1) {
       return;
@@ -1189,7 +1149,6 @@ stringifyString (str) {
     /* Output the part of the string before
     // the offending character */
     const end = match.index;
-
     out += str.substring (idx, end);
 
     /* Output the proper escape sequence */
@@ -1208,8 +1167,7 @@ stringifyString (str) {
     default:
       /* Unicode escape sequence */
       const codep = chr.codePointAt(0);
-      const hex = codep.toString (16).toUpperCase();
-
+      const hex = codep.toString (16).toLowerCase();
       out += "\\u{" + hex + '}';
     }
 
@@ -1219,13 +1177,9 @@ stringifyString (str) {
   this.output += out + '"';
 }
 
-/* ===--------------------------------------------------------------------=== */
-
 stringifyIdentifier (ident) {
   this.output += ident;
 }
-
-/* ===--------------------------------------------------------------------=== */
 
 stringifyKey (key) {
   if (USON.isIdentifier (key)) this.stringifyIdentifier (key);
@@ -1235,41 +1189,29 @@ stringifyKey (key) {
 /* ===--------------------------------------------------------------------=== */
 
 stringifyNumber (num) {
-  /* Check for a special number value */
-  if (isFinite (num)) {
-    this.output += num.toString();
-  } else if (Number.isNaN (num)) {
-    this.output += "NaN";
-  } else if (num > 0) {
-    this.output += "Infinity";
-  } else {
-    this.output += "-Infinity";
-  }
+  this.output += Stringify.number (num);
 }
-
-/* ===--------------------------------------------------------------------=== */
 
 stringifyBoolean (bool) {
-  if (bool) this.output += "true";
-  else this.output += "false";
+  this.output += Stringify.boolean (bool);
 }
 
-/* ===--------------------------------------------------------------------=== */
-
 stringifyNull() {
-  this.output += "null";
+  this.output += Stringify.null();
+}
+
+stringifyUndefined() {
+  this.output += Stringify.undefined();
 }
 
 /* ===--------------------------------------------------------------------=== */
 
 stringifyVerbatim (verb) {
-  const delim = verb.delimitingIdentifier;
-
-  this.output += "<!" + delim + '\n'
-  + verb + '\n' + '!' + delim + '>';
+  const delim = verb.delimitingIdentifier || "";
+  const sep = (verb.delimitingIdentifier === null) ? '\r' : '\n';
+  this.output += "<!" + delim + sep
+  + verb + sep +  '!' + delim + '>';
 }
-
-/* ===--------------------------------------------------------------------=== */
 
 stringifyData (data) {
   let idx = 0;
@@ -1286,16 +1228,16 @@ stringifyData (data) {
 
   /* Encode the data */
   for (; idx !== end; idx += 3) {
-    if (indent !== 0) {
+    if (indent) {
       /* Break at 80th column */
       if ((idx % 60) === 0) {
         out += '\n';
       }
     }
 
-    const code0 = data.charCodeAt(idx + 0);
-    const code1 = data.charCodeAt(idx + 1);
-    const code2 = data.charCodeAt(idx + 2);
+    const code0 = data[idx + 0];
+    const code1 = data[idx + 1];
+    const code2 = data[idx + 2];
 
     out += lut[code0 >> 2];
     out += lut[((code0 << 4) & 0x3F) | (code1 >> 4)];
@@ -1306,26 +1248,26 @@ stringifyData (data) {
   /* Remainder and padding characters */
   switch (rem) {
   case 2: {
-    const code0 = data.charCodeAt(idx + 0);
-    const code1 = data.charCodeAt(idx + 1);
+    const code0 = data[idx + 0];
+    const code1 = data[idx + 1];
 
     out += lut[code0 >> 2];
     out += lut[((code0 << 4) & 0x3F) | (code1 >> 4)];
     out += lut[(code1 << 2) & 0x3F];
 
-    if (false) {
+    if (this.base64pad) {
       out += pad;
     }
 
     break;
   }
   case 1: {
-    const code0 = data.charCodeAt(idx);
+    const code0 = data[idx];
 
     out += lut[code0 >> 2];
     out += lut[(code0 << 4) & 0x3F];
 
-    if (false) {
+    if (this.base64pad) {
       out += pad;
       out += pad;
     }
@@ -1335,7 +1277,7 @@ stringifyData (data) {
 
   this.output += out;
 
-  if (indent !== 0) {
+  if (indent) {
     this.output += '\n';
   }
 
@@ -1344,11 +1286,10 @@ stringifyData (data) {
 
 /* ===--------------------------------------------------------------------=== */
 
-stringifyArray (arr, depth) {
+stringifyArray (arr) {
   const indent = this.indent;
-
   this.output += '[';
-  ++depth;
+  ++this.depth;
 
   /* Iterate over the values */
   for (let idx = 0; idx !== arr.length; ++idx) {
@@ -1356,24 +1297,25 @@ stringifyArray (arr, depth) {
 
     /* Don't output undefined values */
     if (val !== undefined) {
-      if (indent !== 0) {
+      if (indent) {
         this.output += '\n';
       }
 
-      this.stringifyValue (val, true, depth);
+      this.stringifyValue (val, true);
 
-      if (indent === 0 && idx !== arr.length - 1) {
+      if (idx !== arr.length - 1) {
+        /* JSON compatibility */
         this.output += ',';
       }
     }
   }
 
-  --depth;
+  --this.depth;
 
   /* Don't indent inside an empty array */
-  if (indent !== 0 && arr.length !== 0) {
+  if (indent && arr.length !== 0) {
     this.output += '\n';
-    this.stringifyIndent (depth);
+    this.stringifyIndent();
   }
 
   this.output += ']';
@@ -1381,11 +1323,10 @@ stringifyArray (arr, depth) {
 
 /* ===--------------------------------------------------------------------=== */
 
-stringifyObject (obj, depth) {
+stringifyObject (obj) {
   const indent = this.indent;
-
   this.output += '{';
-  ++depth;
+  ++this.depth;
 
   /* Iterate over the keys */
   const items = Object.entries (obj);
@@ -1401,26 +1342,23 @@ stringifyObject (obj, depth) {
     value = this.filter (obj, key, value);
 
     if (value !== undefined) {
-      if (indent !== 0) {
+      if (indent) {
         this.output += '\n';
-        this.stringifyIndent (depth);
+        this.stringifyIndent();
       }
 
       this.stringifyKey (key);
       this.output += ':';
-      this.stringifyValue (value, false, depth);
-
-      if (indent === 0 && idx !== items.length - 1) {
-        this.output += ';';
-      }
+      this.stringifyValue (value, false);
+      this.output += ';';
     }
   }
 
-  --depth;
+  --this.depth;
 
-  if (indent !== 0 && items.length !== 0) {
+  if (indent && items.length !== 0) {
     this.output += '\n';
-    this.stringifyIndent (depth);
+    this.stringifyIndent();
   }
 
   this.output += '}';
@@ -1428,11 +1366,10 @@ stringifyObject (obj, depth) {
 
 /* ===--------------------------------------------------------------------=== */
 
-stringifyMap (map, depth) {
+stringifyMap (map) {
   const indent = this.indent;
-
   this.output += '{';
-  ++depth;
+  ++this.depth;
 
   const items = map.entries();
   let idx = 0;
@@ -1447,28 +1384,25 @@ stringifyMap (map, depth) {
     val = this.filter (map, key, val);
 
     if (val !== undefined) {
-      if (indent !== 0) {
+      if (indent) {
         this.output += '\n';
-        this.stringifyIndent (depth);
+        this.stringifyIndent();
       }
 
       this.stringifyKey (key);
       this.output += ':';
-      this.stringifyValue (val, false, depth);
-
-      if (indent === 0 && idx !== map.size - 1) {
-        this.output += ';';
-      }
+      this.stringifyValue (val, false);
+      this.output += ';';
     }
 
     ++idx;
   }
 
-  --depth;
+  --this.depth;
 
-  if (indent !== 0 && map.size !== 0) {
+  if (indent && map.size !== 0) {
     this.output += '\n';
-    this.stringifyIndent (depth);
+    this.stringifyIndent();
   }
 
   this.output += '}';
@@ -1476,10 +1410,10 @@ stringifyMap (map, depth) {
 
 /* ===--------------------------------------------------------------------=== */
 
-stringifyValue (val, inArr, depth) {
-  if (this.indent !== 0) {
+stringifyValue (val, inArr) {
+  if (this.indent) {
     if (inArr) {
-      this.stringifyIndent (depth);
+      this.stringifyIndent();
     } else {
       /* Space in-between a key/value pair */
       this.output += ' ';
@@ -1489,25 +1423,36 @@ stringifyValue (val, inArr, depth) {
   switch (typeof val) {
   case "object":
     if (Array.isArray (val)) {
-      this.stringifyArray (val, depth);
+      this.stringifyArray (val);
     } else if (val instanceof Set) {
       /* Turn the set into array */
-      this.stringifyArray ([...val], depth);
+      this.stringifyArray ([...val]);
     } else if (val instanceof Map) {
       /* This is same as `stringifyObject()`, but for `Map` */
-      this.stringifyMap (val, depth);
-    } else if (val instanceof RegExp) {
-      /* Neat way to represent regular expressions */
-      this.stringifyVerbatim (new USONVerbatim (val.toString(), "regex"));
-    } else if (val instanceof Function) {
-      /* And functions */
-      this.stringifyVerbatim (new USONVerbatim (val.toString(), "js"));
+      this.stringifyMap (val);
     } else if (val instanceof String) {
       /* Handle USON-specific string types */
       if (val instanceof USONIdentifier) this.stringifyIdentifier (val);
       else if (val instanceof USONVerbatim) this.stringifyVerbatim (val);
-      else if (val instanceof USONData) this.stringifyData (val);
       else this.stringifyString (val.valueOf());
+    } else if (val instanceof USONData) {
+      /* Binary data */
+      this.stringifyData (val);
+    } else if (val instanceof UXMLNode && val.type === UXML.nodeType.tag) {
+      /* XML tag */
+      this.output += new UXMLFormatter().format (val, this.indent
+      , {depth: this.depth, noIndentFirst: true});
+    } else if (val instanceof UXMLDocument) {
+      this.stringifyVerbatim (new USONVerbatim (new UXMLFormatter()
+      .format (val, this.indent), this.indent ? "xml" : null));
+    } else if (val instanceof RegExp) {
+      /* Neat way to represent regular expressions */
+      this.stringifyVerbatim (new USONVerbatim (val.toString()
+      , this.indent ? "regex" : null));
+    } else if (val instanceof Function) {
+      /* And functions */
+      this.stringifyVerbatim (new USONVerbatim (val.toString()
+      , this.indent ? "js" : null));
     } else if (val instanceof Number) {
       this.stringifyNumber (val.valueOf());
     } else if (val instanceof Boolean) {
@@ -1515,7 +1460,7 @@ stringifyValue (val, inArr, depth) {
     } else if (val === null) {
       this.stringifyNull();
     } else {
-      this.stringifyObject (val, depth);
+      this.stringifyObject (val);
     }
 
     break;
@@ -1531,21 +1476,22 @@ stringifyValue (val, inArr, depth) {
   case "symbol":
     const str = val.toString();
     this.stringifyString (str.substring ("Symbol(".length, str.length - 1));
+    break;
   default:
-    this.output += "undefined";
+    this.stringifyUndefined();
   }
 }
 
 /* ===--------------------------------------------------------------------------
 // Generate the indentation for the specified depth */
-stringifyIndent (depth) {
-  this.output += ' '.repeat (depth * this.indent);
+stringifyIndent() {
+  this.output += ' '.repeat (this.depth * this.indent);
 }
 
 /* ===--------------------------------------------------------------------------
 // Format the value */
 stringify() {
-  this.stringifyValue (this.value, true, 0);
+  this.stringifyValue (this.value, true);
 
   /* Prevent from calling again */
   delete this.value;
@@ -1559,15 +1505,19 @@ constructor (value, replacer=null, indent=0) {
   switch (indent) {
   case 8: break;
   case 4: break;
+  case 3: break;
   case 2: break;
+  case 1: break;
   case 0: break;
   default: throw new RangeError();
   }
 
   Object.defineProperties (this, {
+    value:  {value: value, writable: true, configurable: true},
     output: {value: "", writable: true},
-    value: {value: value, writable: true, configurable: true},
     replacer: {value: replacer},
+    base64pad: {value: false},
+    depth:  {value: 0, writable: true},
     indent: {value: indent}
   });
 }}
@@ -1583,15 +1533,7 @@ const USON = new Object();
 Object.defineProperties (USON, {
   [Symbol.toStringTag]: {get: () => "USON"},
 
-  /* ===----------------------------------------------
-  // Replace obsolete whitespace control characters */
-  normalizeWspace: {value: (input, indent=2) => {
-    return input
-    /* Replace with spaces */
-    .replace (/\t/g, ' '.repeat (indent))
-    /* Replace Windows and MacOS Classic line endings with line feeds */
-    .replace (/\r\n?/g, '\n');
-  }},
+  $: {value: ""}, // default value
 
   /* ===------------------------------------------------------
   // Check if the character is a valid identifier character */
@@ -1609,17 +1551,19 @@ Object.defineProperties (USON, {
     case ')':
     case '#':
     case '"':
+    case "'":
     case ':':
     case ';':
     case ',':
     case '\x7f': return false;
-    default: return chr > ' ';
+    default: return chr.charCodeAt(0) > 32;
     }
   }},
 
   /* ===----------------------------------------------
   // Check if the string qualifies as an identifier */
-  isIdentifier: {value: (str) => str.match (USON.pattern.identifier) === null},
+  isIdentifier: {value: (str) => str.length !== 0
+  && str.match (USON.pattern.identifier) === null},
 
   /* ===---------------------------------------------
   // Check if the string qualifies as a media type */
@@ -1628,7 +1572,7 @@ Object.defineProperties (USON, {
   /* ===-------------------------------
   // Emulate `JSON.parse()` behavior */
   parse: {value: (input, reviver) => {
-    const parser = new USONParser(input, reviver, false);
+    const parser = new USONParser(input, reviver);
     const root = parser.parse();
 
     if (root === undefined) {
@@ -1651,13 +1595,14 @@ Object.defineProperties (USON, {
     /* Negative polarity on some of the patterns
     // is intentional: they are used to scan
     // until the next stop-character */
-    number: /[^-+\d.e]/ig,
-    unicode: /[^\da-f]/ig,
+    number: /[^-+\d.eE]/g,
+    unicode: /[^\da-fA-F]/g,
     string: /[\x00-\x1f\\"\x7f]/g,
-    media: /[\x00-\x20{}\[\]<>":?,#()\x7f]/g,
-    identifier: /[\x00-\x20{}\[\]<>":;,#()\x7f]/g,
+    media: /[\x00-\x20\[\]{}<>"':?,#()\x7f]/g,
+    identifier: /[\x00-\x20\[\]{}<>"':;,#()\x7f]/g,
     commentMulti: /[\x00-\x1f()\x7f]/g,
     commentSingle: /[\x00-\x1f\x7f]/g,
+    verbatim: /[\x00-\x09\x0b-\x1f\x7f]/g,
     wspace: /[^\x20]/g
   }},
 
@@ -1707,10 +1652,10 @@ Object.defineProperties (USON, {
     string: 2,
     stringEscape: 3,
     escapeUnicode: 4,
-    noMedia: 5,
-    base64Encoding: 6,
-    unexpectedToken: 7,
-    unexpectedEnd: 8
+    base64Encoding: 5,
+    unexpectedToken: 6,
+    unexpectedEnd: 7,
+    xml: 8
   }},
 
   /* Error strings */
@@ -1720,55 +1665,25 @@ Object.defineProperties (USON, {
     "String",
     "Escape",
     "Unicode",
-    "Media",
     "Base64",
     "Token",
-    "End"
+    "End",
+    "XML"
   ]}
 });
 
-/* =============================================================================
-// UCFG: USON configuration
-// -------------------------------------------------------------------------- */
-
-const UCFG = new Object();
-
-Object.defineProperties (UCFG, {
-  [Symbol.toStringTag]: {get: () => "UCFG"},
-
-  /* There is no `UCFG.stringify()` method separate
-  // from `USON.stringify()` since configs aren't
-  // auto-generated but rather written
-  // manually by hand */
-  parse: {value: (input, reviver) => {
-    const parser = new USONParser(input, reviver, true);
-    const root = parser.parse();
-
-    if (root === undefined) {
-      throw new SyntaxError ('[' + USON.errorStr[parser.err] + ']'
-      + ' ' + parser.line + ':' + parser.col);
-    }
-
-    return root;
-  }}
-});
-
 /* ===--------------------------------------------------------------------------
-// CommonJS exports */
-if (typeof module !== 'undefined'
-&&  typeof module.exports !== 'undefined') {
-  module.exports = {
-    USON, UCFG,
-    USONParser,
-    USONFormatter,
-    USONObject,
-    USONArray,
-    USONVerbatim,
-    USONData,
-    USONIdentifier,
-    binarySearch,
-    Integer
-  };
+// Exports */
+export {
+  USON,
+  USONParser,
+  USONFormatter,
+  USONObject,
+  USONArray,
+  USONVerbatim,
+  USONData,
+  USONIdentifier,
+  Stringify
 }
 
 /* ===------------------------------- {U} --------------------------------=== */
