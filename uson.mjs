@@ -592,12 +592,6 @@ parseMedia (idx) {
   }
 
   const end = match.index;
-  const chr = uson[end];
-
-  if (chr !== '?') {
-    return this.parseError (USON.error.unexpectedToken, end);
-  }
-
   this.pos = end + 1;
 
   return uson.substring (start, end);
@@ -606,7 +600,7 @@ parseMedia (idx) {
 /* ===--------------------------------------------------------------------------
 // Base64-encoded data: <?image/png?...> */
 parseData (idx) {
-  const returnData = () => {
+  const convertData = () => {
     /* Convert to binary and save the media type */
     this.pos = idx + 1;
     return new USONData(decoded, media);
@@ -620,7 +614,7 @@ parseData (idx) {
   }
 
   /* Check if this is actually a verbatim string */
-  const chr = uson[idx];
+  let chr = uson[idx];
 
   if (chr === '!') {
     return this.parseVerbatim (idx + 1);
@@ -637,16 +631,35 @@ parseData (idx) {
     }
 
     idx = this.pos;
-  } else {
-    const xml = new UXMLParser();
-    const doc = xml.parse (this.input, idx - 1, len);
+    chr = uson[idx - 1];
 
-    if (doc === null) {
+    if (chr !== '?') {
+      if (chr === ' ' && media === "xml") {
+        /* Entire XML document over USON */
+        const xml = new UXMLParser();
+        const doc = xml.parse (this.input, idx - 6, len);
+
+        if (doc === null) {
+          return this.parseError (USON.error.xml, xml.pos);
+        }
+
+        this.pos = xml.pos;
+        return doc;
+      }
+
+      return this.parseError (USON.error.unexpectedToken, idx - 1);
+    }
+  } else {
+    /* Just XML tag */
+    const xml = new UXMLParser();
+    const tag = xml.parse (this.input, idx - 1, len);
+
+    if (tag === null) {
       return this.parseError (USON.error.xml, xml.pos);
     }
 
     this.pos = xml.pos;
-    return doc;
+    return tag;
   }
 
   /* Decode the data */
@@ -686,7 +699,7 @@ parseData (idx) {
 
       if (uson[idx] === '>') {
         /* Encoded data end */
-        return returnData();
+        return convertData();
       }
 
       if ((code0 > 64 && code1 > 64) || len - idx < 2) {
@@ -704,7 +717,7 @@ parseData (idx) {
       } else if (code2 === 64) {
         ++idx;
       } else if (code2 === 128) {
-        return returnData();
+        return convertData();
       } else {
         return this.parseError (USON.error.base64Encoding, idx);
       }
@@ -712,7 +725,7 @@ parseData (idx) {
       if (code3 === 64) {
         ++idx;
       } else if (code3 === 128) {
-        return returnData();
+        return convertData();
       } else {
         return this.parseError (USON.error.base64Encoding, idx);
       }
@@ -978,10 +991,6 @@ skipWspace (idx) {
       ++idx;
       ++this.line;
       this.linePos = idx;
-      continue;
-    } else if (chr === '\t' || chr === '\r') {
-      /* JSON compatibility */
-      ++idx;
       continue;
     } else if (chr === '#') {
       /* Single line comment */
@@ -1443,8 +1452,12 @@ stringifyValue (val, inArr) {
       this.output += new UXMLFormatter().format (val, this.indent
       , {depth: this.depth, noIndentFirst: true});
     } else if (val instanceof UXMLDocument) {
-      this.stringifyVerbatim (new USONVerbatim (new UXMLFormatter()
-      .format (val, this.indent), this.indent ? "xml" : null));
+      if (this.value === val) {
+        this.output += new UXMLFormatter().format (val, this.indent);
+      } else {
+        this.stringifyVerbatim (new USONVerbatim (new UXMLFormatter()
+        .format (val, this.indent), this.indent ? "xml" : null));
+      }
     } else if (val instanceof RegExp) {
       /* Neat way to represent regular expressions */
       this.stringifyVerbatim (new USONVerbatim (val.toString()
@@ -1600,10 +1613,10 @@ Object.defineProperties (USON, {
     string: /[\x00-\x1f\\"\x7f]/g,
     media: /[\x00-\x20\[\]{}<>"':?,#()\x7f]/g,
     identifier: /[\x00-\x20\[\]{}<>"':;,#()\x7f]/g,
-    commentMulti: /[\x00-\x1f()\x7f]/g,
-    commentSingle: /[\x00-\x1f\x7f]/g,
-    verbatim: /[\x00-\x09\x0b-\x1f\x7f]/g,
-    wspace: /[^\x20]/g
+    commentMulti: /[\x00-\x08\x0a-\x0c\x0e-\x1f()\x7f]/g,
+    commentSingle: /[\x00-\x08\x0a-\x0c\x0e-\x1f\x7f]/g,
+    verbatim: /[\x00-\x08\x0b-\x1f\x7f]/g,
+    wspace: /[^\t\r\x20]/g
   }},
 
   /* Decoding table */

@@ -108,6 +108,59 @@ USON.stringify (value[, replacer[, space]]);
 
 USON works in modern browsers out of the box.
 
+## XML over USON
+
+It is possible to parse XML with USON eliminating the need for separate parser.
+
+Much like JSON, USON supports single root values, e.g.:
+
+```js
+"This document consists of a single string only."
+```
+
+Or:
+
+```js
+3.14
+```
+
+Will be parsed as a string and a number respectively.
+
+When parsing XML document with USON, the [entire document](https://github.com/garnetius/uson-js/tree/master/gallery/xml.xml), including all top-level processing instructions, is treated as a single root USON value.
+
+Of course, outputting such a document back with USON as a proper XML is supported as well.
+
+Note that this won't work when entire XML *document* is used as a *non-root* USON value:
+
+```js
+{
+  value: <?xml version="1.0"?> <!-- Error -->
+  <root>
+    <tag/>
+  </root>
+}
+```
+
+Only XML *tags* can be non-root USON values:
+
+```js
+{
+  value: <root> <!-- 👍 OK -->
+    <tag/>
+  </root>
+}
+```
+
+## Caveats
+
+Carriage returns `CR` in line endings (Windows-style) is not supported by USON grammar. USON verbatim strings feature requires normalization of line endings in entire document and settling on line feeds `LF` is an obvious choice.
+
+*JSON* documents with `CR`s in them will be accepted just fine, as per backwards-compatibility requirement, but a document using new USON features would very likely trigger a parsing error when `CRs` are encountered.
+
+This means that verbatim strings also cannot have any `CR`s in them. Therefore a properly configured text editor with support for UNIX-style line endings is needed when USON is written by hand. Even when USON is generated automatically and minified, care should be taken to ensure that verbatim strings use only line feeds for formatting.
+
+Simply eliminate Windows line endings from your workflow.
+
 ## Try it Out!
 
 With Node.js:
