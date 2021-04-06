@@ -1,5 +1,7 @@
 # USON JS
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 USON (Universal Serialized Object Notation): a modern improvement over JSON.
 
 This repository has USON implemented in JavaScript.
