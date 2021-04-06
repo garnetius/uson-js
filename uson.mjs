@@ -634,7 +634,7 @@ parseData (idx) {
     chr = uson[idx - 1];
 
     if (chr !== '?') {
-      if (chr === ' ' && media === "xml") {
+      if (media === "xml" && chr === ' ' && idx - 6 === 0) {
         /* Entire XML document over USON */
         const xml = new UXMLParser();
         const doc = xml.parse (this.input, idx - 6, len);
