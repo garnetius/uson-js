@@ -112,7 +112,7 @@ USON works in modern browsers out of the box.
 
 With Node.js:
 
-```
+```bash
 git clone https://github.com/garnetius/core-js.git
 git clone https://github.com/garnetius/radix-tree-js.git
 git clone https://github.com/garnetius/uxml-js.git
