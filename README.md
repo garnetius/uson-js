@@ -104,7 +104,7 @@ USON.parse (text[, reviver]);
 USON.stringify (value[, replacer[, space]]);
 ```
 
-USON works in browsers out of the box.
+USON works in modern browsers out of the box.
 
 ## Try it Out!
 
