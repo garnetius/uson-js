@@ -155,7 +155,7 @@ Only XML *tags* can be non-root USON values:
 
 Carriage returns `CR` in line endings (Windows-style) is not supported by USON grammar. USON verbatim strings feature requires normalization of line endings in entire document and settling on line feeds `LF` is an obvious choice.
 
-*JSON* documents with `CR`s in them will be accepted just fine, as per backwards-compatibility requirement, but a document using new USON features would very likely trigger a parsing error when `CRs` are encountered.
+*JSON* documents with `CR`s in them will be accepted just fine, as per backwards-compatibility requirement, but a document using new USON features would very likely trigger a parsing error when `CR`s are encountered.
 
 This means that verbatim strings also cannot have any `CR`s in them. Therefore a properly configured text editor with support for UNIX-style line endings is needed when USON is written by hand. Even when USON is generated automatically and minified, care should be taken to ensure that verbatim strings use only line feeds for formatting.
 
