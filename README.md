@@ -10,7 +10,7 @@ This repository has USON implemented in JavaScript.
 
   * Object key/value pairs can be separated by semicolons:
 
-    ```uson
+    ```js
     {
       name: "server";
       locations: {
@@ -25,7 +25,7 @@ This repository has USON implemented in JavaScript.
 
   * Stemming from above, trailing comma is now officially allowed, too:
 
-    ```uson
+    ```js
     [
       "abstract",
       "arrow",
@@ -35,7 +35,7 @@ This repository has USON implemented in JavaScript.
 
   * Unquoted strings (identifiers) in both keys and values:
 
-    ```uson
+    ```js
     {
       key: value
     }
@@ -43,19 +43,19 @@ This repository has USON implemented in JavaScript.
 
   * Number type additions (leading or trailing zero is no longer required):
 
-    ```uson
+    ```js
     [Inf, -Inf, NaN, .5, 3.]
     ```
 
   * Real Unicode escape sequences:
 
-    ```uson
+    ```js
     "\u{1F602}"
     ```
 
   * Native Base64-encoded strings for faster and more compact binary data exchange:
 
-    ```uson
+    ```js
     {
       data: <?text/plain?VVNPTiByb2NrcyE=>
     }
@@ -63,7 +63,7 @@ This repository has USON implemented in JavaScript.
 
   * Long verbatim strings (no character escaping needed):
 
-    ```uson
+    ```js
     {
       pattern: <!regex
     <\s*a[^>]*>(.*?)<\s*/\s*a>
@@ -73,7 +73,7 @@ This repository has USON implemented in JavaScript.
 
   * XML tags as values:
 
-    ```uson
+    ```js
     {
       key: <tag option="yes">
         <!-- XML inside USON -->
@@ -84,7 +84,7 @@ This repository has USON implemented in JavaScript.
 
   * Comments:
 
-    ```uson
+    ```js
     {
       # Single line.
       (* Nested multiline
