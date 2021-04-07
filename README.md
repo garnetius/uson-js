@@ -130,7 +130,7 @@ When parsing XML document with USON, the [entire document](https://github.com/ga
 
 Of course, outputting such a document back with USON as a proper XML is supported as well.
 
-Note that this won't work when entire XML *document* is used as a *non-root* USON value:
+Note that this won’t work when entire XML *document* is used as a *non-root* USON value:
 
 ```js
 {
