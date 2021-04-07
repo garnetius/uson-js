@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-USON (Universal Serialized Object Notation): a modern improvement over JSON.
+**USON** (Universal Serialized Object Notation): a modern improvement over [JSON](https://www.json.org/json-en.html).
 
 This repository has USON implemented in JavaScript.
 
@@ -110,7 +110,7 @@ USON works in modern browsers out of the box.
 
 ## XML over USON
 
-It is possible to parse XML with USON, eliminating the need for separate parser.
+It is possible to parse **XML** with USON, eliminating the need for separate parser.
 
 Much like JSON, USON supports single root values, e.g.:
 
@@ -163,7 +163,7 @@ Simply eliminate Windows line endings from your workflow.
 
 ## Try it Out!
 
-With Node.js:
+With [Node.js](https://nodejs.org/en/):
 
 ```bash
 git clone https://github.com/garnetius/core-js.git
