@@ -8,7 +8,7 @@ This repository has USON implemented in JavaScript.
 
 ## Features
 
-  * Object key/value pairs can be separated by semicolons:
+  * Object key / value pairs can be separated by semicolons:
 
     ```js
     {
@@ -23,7 +23,7 @@ This repository has USON implemented in JavaScript.
     }
     ```
 
-  * Stemming from above, trailing comma is now officially allowed, too:
+  * Stemming from above, trailing comma in arrays is now officially allowed, too:
 
     ```js
     [
@@ -71,7 +71,7 @@ This repository has USON implemented in JavaScript.
     }
     ```
 
-  * XML tags as values:
+  * XML tag values:
 
     ```js
     {
@@ -153,7 +153,7 @@ Only XML *tags* can be non-root USON values:
 
 ## Caveats
 
-Carriage returns `CR` in line endings (Windows-style) is not supported by USON grammar. USON verbatim strings feature requires normalization of line endings in entire document and settling on line feeds `LF` is an obvious choice.
+Carriage return `CR` in line endings (Windows-style) is not supported by USON grammar. USON verbatim strings feature requires normalization of line endings in entire document and settling on line feeds `LF` is an obvious choice.
 
 *JSON* documents with `CR`s in them will be accepted just fine, as per backwards-compatibility requirement, but a document using new USON features would very likely trigger a parsing error when `CR`s are encountered.
 
