@@ -110,7 +110,7 @@ USON works in modern browsers out of the box.
 
 ## XML over USON
 
-It is possible to parse **XML** with USON, eliminating the need for separate parser.
+It is possible to parse **XML** with USON, eliminating the need for using a different parser.
 
 Much like JSON, USON supports single root values, e.g.:
 
