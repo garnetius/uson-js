@@ -1,9 +1,9 @@
 /* ================================= $ J $ =====================================
 // <uson.mjs>
 //
-// USON: a modern improvement over JSON.
+// USON: micro serialized object notation, a modern improvement over JSON.
 //
-// This is a USON parser and writer implemented in JavaScript.
+// This is a USON parser and serializer implemented in JavaScript.
 //
 // Copyright garnetius.
 // -------------------------------------------------------------------------- */
@@ -429,8 +429,13 @@ parseIdentifier (key, idx) {
       case  "+Inf": ident = Infinity; break;
       case  "-Inf": ident =-Infinity; break;
       case   "NaN": ident = NaN; break;
-      default: return new USONIdentifier(ident);
-      }
+      /* Hand it over to application as an identifier string.
+      // If application doesn't parse it, then it should
+      // report a parsing error. */
+      default: {
+        if (this.unknownPrimitivesAllowed) return new USONIdentifier(ident);
+        return this.parseError (USON.error.unexpectedToken, start);
+      }}
     }
 
     return ident;
@@ -992,11 +997,11 @@ skipWspace (idx) {
       ++this.line;
       this.linePos = idx;
       continue;
-    } else if (chr === '#') {
+    } else if (chr === '#' && this.commentsAllowed) {
       /* Single line comment */
       idx = this.skipCommentSingle (idx + 1);
       continue;
-    } else if (chr === '(') {
+    } else if (chr === '(' && this.commentsAllowed) {
       /* Multiline comment */
       idx = this.skipCommentMulti (idx + 1);
       continue;
@@ -1058,6 +1063,12 @@ parse() {
 
 /* ===--------------------------------------------------------------------------
 // Initialize the parser */
+allowComments() {this.commentsAllowed = true}
+forbidComments() {this.commentsAllowed = false}
+
+allowUnknownPrimitives() {this.unknownPrimitivesAllowed = true}
+forbidUnknownPrimitives() {this.unknownPrimitivesAllowed = false}
+
 constructor (input, reviver=null) {
   Object.defineProperties (this, {
     input: {value: input},
@@ -1068,7 +1079,9 @@ constructor (input, reviver=null) {
     line:  {value: 1, writable: true},
     col:   {value: 0, writable: true},
     linePos: {value: 0, writable: true},
-    pos:   {value: 0, writable: true}
+    pos:   {value: 0, writable: true},
+    unknownPrimitivesAllowed: {value: false, writable: true},
+    commentsAllowed: {value: false, writable: true}
   });
 }}
 
@@ -1560,11 +1573,7 @@ Object.defineProperties (USON, {
     case ']':
     case '<':
     case '>':
-    case '(':
-    case ')':
-    case '#':
     case '"':
-    case "'":
     case ':':
     case ';':
     case ',':
@@ -1576,7 +1585,8 @@ Object.defineProperties (USON, {
   /* ===----------------------------------------------
   // Check if the string qualifies as an identifier */
   isIdentifier: {value: (str) => str.length !== 0
-  && str.match (USON.pattern.identifier) === null},
+  && str.match (USON.pattern.identifier) === null
+  && str[0] !== '(' && str[0] !== '#'},
 
   /* ===---------------------------------------------
   // Check if the string qualifies as a media type */
@@ -1586,6 +1596,8 @@ Object.defineProperties (USON, {
   // Emulate `JSON.parse()` behavior */
   parse: {value: (input, reviver) => {
     const parser = new USONParser(input, reviver);
+    parser.forbidComments();
+    parser.forbidUnknownPrimitives();
     const root = parser.parse();
 
     if (root === undefined) {
@@ -1611,8 +1623,8 @@ Object.defineProperties (USON, {
     number: /[^-+\d.eE]/g,
     unicode: /[^\da-fA-F]/g,
     string: /[\x00-\x1f\\"\x7f]/g,
-    media: /[\x00-\x20\[\]{}<>"':?,#()\x7f]/g,
-    identifier: /[\x00-\x20\[\]{}<>"':;,#()\x7f]/g,
+    media: /[\x00-\x20\[\]{}<>":?,\x7f]/g,
+    identifier: /[\x00-\x20\[\]{}<>":;,\x7f]/g,
     commentMulti: /[\x00-\x08\x0a-\x0c\x0e-\x1f()\x7f]/g,
     commentSingle: /[\x00-\x08\x0a-\x0c\x0e-\x1f\x7f]/g,
     verbatim: /[\x00-\x08\x0b-\x1f\x7f]/g,

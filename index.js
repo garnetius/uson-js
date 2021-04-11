@@ -45,6 +45,8 @@ const parser = new USONParser (doc/*, (key, val) => {
 }*/);
 
 /* Parse the USON document */
+parser.allowComments();
+parser.allowUnknownPrimitives();
 const root = parser.parse();
 
 /* Output the error code and the position in the input */
