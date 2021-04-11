@@ -89,9 +89,18 @@ Although there are many ways things like binary or multiline strings can be repr
     !regex>;
 
       article: <!markdown
-    **General relativity**, also known as the general theory of relativity, is the [geometric theory](https://en.wikipedia.org/wiki/Scientific_theory) of gravitation published by Albert Einstein in 1915 and is the current description of gravitation in modern physics.
+    **General relativity**, also known as the general theory of relativity,
+    is the [geometric theory](https://en.wikipedia.org/wiki/Scientific_theory)
+    of gravitation published by Albert Einstein in 1915 and is the current
+    description of gravitation in modern physics.
 
-    General relativity generalizes *special relativity* and refines *Newton’s law of universal gravitation*, providing a unified description of gravity as a geometric property of space and time or four-dimensional spacetime. In particular, the curvature of spacetime is directly related to the energy and momentum of whatever matter and radiation are present. The relation is specified by the Einstein field equations, a system of partial differential equations.
+    General relativity generalizes *special relativity* and refines
+    *Newton’s law of universal gravitation*, providing a unified description
+    of gravity as a geometric property of space and time or four-dimensional
+    spacetime. In particular, the curvature of spacetime is directly related
+    to the energy and momentum of whatever matter and radiation are present.
+    The relation is specified by the Einstein field equations, a system
+    of partial differential equations.
 
     Content from [Wikipedia](https://en.wikipedia.org).
     !markdown>;
@@ -203,7 +212,7 @@ Only XML *tags* can be non-root USON values:
 
 ## USON as a configuration format
 
-Some USON features might look appealing enough to use it as you configuration file format. And for very complex configurations it may indeed be a preferred option.
+Some USON features might look appealing enough to use it as a configuration file format. And for very complex configurations it may indeed be a preferred option.
 
 However, it’s strongly advised against using USON (or JSON) for configs. [UCFG](https://github.com/garnetius/ucfg-js) is a much better option and the linked page mentions some of the reasons why.
 
