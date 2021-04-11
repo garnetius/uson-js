@@ -161,7 +161,7 @@ USON works in modern browsers out of the box.
 
 Most of time regular double-quoted JSON strings work just fine for the purpose of content transfer. It’s quite unusual to have a JSON document consisting exclusively of multiline strings, or numerous binary payloads. Usually USON features aren’t needed that much.
 
-But things can change dramatically when USON is authored by hand, includes string content in various formats, and needs to be formatted for easy visual presentation.
+But things can change dramatically when USON is authored by hand, includes string content in various formats, and needs to be formatted for clear visual presentation.
 
 So when you *do* need features like that, USON offers a ready & clean solution.
 
