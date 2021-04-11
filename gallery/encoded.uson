@@ -10,6 +10,6 @@
 
   # Padding characters and media type are optional,
   # but question marks still must be present
-  # to distinguish from verbatim strings
+  # to distinguish from literal strings
   without-media-type: <??MDEyMzQ1Njc4OQ>;
 }

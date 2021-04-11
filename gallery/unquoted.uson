@@ -1,4 +1,14 @@
-# Identifiers in both key name and value
+# Identifiers in both key names and values
 {
+  key: value;
+
+  # This isn't a number
   deposit: 1000.00€;
+
+  # It is recommended to keep things simple
+  # and use unquoted value strings only
+  # to represent actual numbers in
+  # various forms, and enums
+  address: 0x7cef0800;
+  deposit: "1000.00€";
 }
