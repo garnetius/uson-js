@@ -142,9 +142,9 @@ It is important to note that USON is *not* a subset of any language (like JSON, 
 
 For this reason USON decided against some things it considers redundant, like support for single-quoted strings (but available in **UCFG**, see below) or mandatory support for hexadecimal numbers.
 
-Hexadecimal (octal, binary, whatever) numbers can be used in USON via unquoted string values by explicitly allowing unrecognized primitives for parser instance. When enabled, any unquoted USON string that failed to parse as a decimal number, infinity, NaN, boolean, or null is simply handed over to application, which decides what to do with it.
+Hexadecimal (octal, binary, whatever) numbers can be used in USON via unquoted string values by explicitly allowing unrecognized primitives for parser instance. When enabled, any unquoted USON string that failed to parse as a decimal number, infinity, `NaN`, boolean, or `null` is simply handed over to application, which decides what to do with it.
 
-This way arbitrary number formats and `enums` can be made possible in USON without overloading the grammar.
+This way arbitrary number formats and `enum`s can be made possible in USON without overloading the grammar.
 
 ## Usage
 
